@@ -1,44 +1,26 @@
 from odoo import api, fields, models
-from datetime import timedelta
 
 class HallInvoiceLine(models.Model):
     _name = 'hall.invoice.line'
     _description = 'Hall Invoice Line'
 
-    invoice_id = fields.Many2one('hall.invoice', string='Invoice')
+    invoice_id = fields.Many2one('hall.invoice', string='Invoice', required=True, ondelete='cascade')
     product_id = fields.Many2one('product.product', string='Product', required=True)
     name = fields.Text(string='Description', required=True)
-    quantity = fields.Float(string='Quantity', default=1.0)
-    number_of_days = fields.Integer(string='Number of Days', compute='_compute_days', store=True)
-    price_unit = fields.Float(string='Unit Price')
-    price_with_days = fields.Float(string='Price with Days', compute='_compute_price_with_days', store=True)
+    quantity = fields.Float(string='Quantity', default=1.0, required=True)
+    number_of_days = fields.Integer(string='Number of Days', default=1, required=True)
+    price_unit = fields.Float(string='Unit Price', required=True, digits='Product Price')
     tax_ids = fields.Many2many('account.tax', string='Taxes')
+    
     price_subtotal = fields.Monetary(string='Subtotal', compute='_compute_amounts', store=True)
-    price_tax = fields.Monetary(string='Tax Amount', compute='_compute_amounts', store=True)
+    price_tax = fields.Monetary(string='Tax', compute='_compute_amounts', store=True)
     price_total = fields.Monetary(string='Total', compute='_compute_amounts', store=True)
     currency_id = fields.Many2one(related='invoice_id.currency_id')
 
-    @api.depends('invoice_id.start_date', 'invoice_id.end_date')
-    def _compute_days(self):
-        for line in self:
-            if line.invoice_id.start_date and line.invoice_id.end_date:
-                line.number_of_days = (line.invoice_id.end_date - line.invoice_id.start_date).days + 1
-
-    @api.onchange('product_id')
-    def _onchange_product_id(self):
-        if self.product_id:
-            self.name = self.product_id.get_product_multiline_description_sale()
-            self.price_unit = self.product_id.list_price
-
-    @api.depends('price_unit', 'number_of_days')
-    def _compute_price_with_days(self):
-        for line in self:
-            line.price_with_days = line.price_unit * line.number_of_days
-
-    @api.depends('quantity', 'price_with_days', 'tax_ids')
+    @api.depends('quantity', 'number_of_days', 'price_unit', 'tax_ids')
     def _compute_amounts(self):
         for line in self:
-            price = line.price_with_days * line.quantity
+            price = line.price_unit * line.quantity * line.number_of_days
             taxes = line.tax_ids.compute_all(
                 price,
                 line.currency_id,
@@ -48,4 +30,10 @@ class HallInvoiceLine(models.Model):
             )
             line.price_subtotal = taxes['total_excluded']
             line.price_tax = taxes['total_included'] - taxes['total_excluded']
-            line.price_total = taxes['total_included'] 
+            line.price_total = taxes['total_included']
+
+    @api.onchange('product_id')
+    def _onchange_product_id(self):
+        if self.product_id:
+            self.name = self.product_id.get_product_multiline_description_sale()
+            self.price_unit = self.product_id.list_price

@@ -1,20 +1,19 @@
 {
     'name': 'Hotel Hall Invoice',
     'version': '1.0',
-    'category': 'Sales',
-    'summary': 'Manage Hall Invoices',
+    'category': 'Accounting',
+    'summary': 'Hall Invoicing System',
     'description': """
-        Module for managing hall invoices
+        Manage hall invoices with number of days calculation
     """,
-    'depends': ['base', 'mail', 'account'],
+    'depends': ['account', 'mail'],
     'data': [
         'security/ir.model.access.csv',
-        'data/sequence.xml',
+        'views/hall_invoice_views.xml',
         'reports/hall_invoice_reports.xml',
         'reports/hall_invoice_templates.xml',
-        'views/hall_invoice_views.xml',
+        'data/sequence.xml',
     ],
     'installable': True,
     'application': True,
-    'auto_install': False,
 }

@@ -1,70 +1,96 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
-from datetime import timedelta
 
 class HallInvoice(models.Model):
     _name = 'hall.invoice'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'Hall Invoice'
+    _order = 'date desc, name desc'
 
-    name = fields.Char(string='Reference', required=True, copy=False, readonly=True, default='New')
-    partner_id = fields.Many2one('res.partner', string='Customer', required=True)
-    date = fields.Date(string='Date', default=fields.Date.today)
-    start_date = fields.Date(string='Start Date', required=True, default=fields.Date.today)
-    end_date = fields.Date(string='End Date', required=True)
+    # Private attributes
+    _sql_constraints = [
+        ('name_uniq', 'unique(name)', 'Invoice number must be unique!')
+    ]
+
+    # Default methods
+    @api.model
+    def _get_default_currency(self):
+        return self.env.company.currency_id
+
+    # Fields
+    name = fields.Char(string='Number', readonly=True, copy=False, default='/')
+    partner_id = fields.Many2one('res.partner', string='Customer', required=True, tracking=True)
+    date = fields.Date(string='Invoice Date', default=fields.Date.context_today, tracking=True)
+    start_date = fields.Date(string='Start Date', required=True, tracking=True)
+    end_date = fields.Date(string='End Date', required=True, tracking=True)
     state = fields.Selection([
         ('draft', 'Draft'),
         ('posted', 'Posted'),
         ('cancelled', 'Cancelled')
-    ], string='Status', default='draft', tracking=True)
-    
-    line_ids = fields.One2many('hall.invoice.line', 'invoice_id', string='Invoice Lines')
-    amount_untaxed = fields.Monetary(string='Untaxed Amount', compute='_compute_amounts', store=True)
-    amount_tax = fields.Monetary(string='Tax Amount', compute='_compute_amounts', store=True)
-    amount_total = fields.Monetary(string='Total', compute='_compute_amounts', store=True)
-    currency_id = fields.Many2one('res.currency', string='Currency', default=lambda self: self.env.company.currency_id)
-    
+    ], string='Status', default='draft', tracking=True, copy=False)
     payment_state = fields.Selection([
         ('not_paid', 'Not Paid'),
         ('partial', 'Partially Paid'),
-        ('paid', 'Paid')
-    ], string='Payment Status', default='not_paid', tracking=True)
+        ('paid', 'Paid'),
+    ], string='Payment Status', default='not_paid', tracking=True, copy=False)
     
-    amount_paid = fields.Monetary(string='Amount Paid', compute='_compute_amount_paid', store=True)
-    amount_residual = fields.Monetary(string='Amount Due', compute='_compute_amount_paid', store=True)
-    payment_ids = fields.Many2many('account.payment', string='Payments')
+    line_ids = fields.One2many('hall.invoice.line', 'invoice_id', string='Invoice Lines', copy=True)
+    currency_id = fields.Many2one('res.currency', string='Currency', 
+        default=_get_default_currency, required=True)
+    
+    amount_untaxed = fields.Monetary(string='Untaxed Amount', compute='_compute_amounts', store=True)
+    amount_tax = fields.Monetary(string='Tax Amount', compute='_compute_amounts', store=True)
+    amount_total = fields.Monetary(string='Total', compute='_compute_amounts', store=True)
+    amount_residual = fields.Monetary(string='Amount Due', compute='_compute_amounts', store=True)
+    amount_paid = fields.Monetary(string='Amount Paid', compute='_compute_amounts', store=True)
 
-    @api.onchange('start_date', 'end_date')
-    def _onchange_dates(self):
-        if self.start_date and self.end_date:
-            if self.end_date < self.start_date:
-                raise UserError(_('End date cannot be earlier than start date.'))
-            delta = (self.end_date - self.start_date).days + 1
-            for line in self.line_ids:
-                line.number_of_days = delta
-
-    @api.depends('payment_ids.amount', 'amount_total')
-    def _compute_amount_paid(self):
-        for invoice in self:
-            paid_amount = sum(invoice.payment_ids.mapped('amount'))
-            invoice.amount_paid = paid_amount
-            invoice.amount_residual = invoice.amount_total - paid_amount
-            
-            if paid_amount >= invoice.amount_total:
-                invoice.payment_state = 'paid'
-            elif paid_amount > 0:
-                invoice.payment_state = 'partial'
-            else:
-                invoice.payment_state = 'not_paid'
-
+    # Compute and depends methods
     @api.depends('line_ids.price_subtotal', 'line_ids.price_tax')
     def _compute_amounts(self):
         for invoice in self:
-            invoice.amount_untaxed = sum(invoice.line_ids.mapped('price_subtotal'))
-            invoice.amount_tax = sum(invoice.line_ids.mapped('price_tax'))
+            lines = invoice.line_ids
+            invoice.amount_untaxed = sum(lines.mapped('price_subtotal'))
+            invoice.amount_tax = sum(lines.mapped('price_tax'))
             invoice.amount_total = invoice.amount_untaxed + invoice.amount_tax
+            invoice.amount_paid = 0.0  # To be implemented with payment functionality
+            invoice.amount_residual = invoice.amount_total - invoice.amount_paid
+
+    # CRUD methods
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', '/') == '/':
+                vals['name'] = self.env['ir.sequence'].next_by_code('hall.invoice')
+        return super().create(vals_list)
+
+    # Action methods
+    def action_post(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_('Only draft invoices can be posted.'))
+        if not self.line_ids:
+            raise UserError(_('Cannot post an invoice without lines.'))
+        self.state = 'posted'
+
+    def action_cancel(self):
+        self.ensure_one()
+        if self.state == 'posted' and self.payment_state != 'not_paid':
+            raise UserError(_('Cannot cancel a paid invoice.'))
+        self.state = 'cancelled'
+
+    def action_draft(self):
+        self.ensure_one()
+        if self.state != 'cancelled':
+            raise UserError(_('Only cancelled invoices can be reset to draft.'))
+        self.state = 'draft'
 
     def action_register_payment(self):
+        self.ensure_one()
+        if self.state != 'posted':
+            raise UserError(_('You can only register payments for posted invoices.'))
+        if self.payment_state == 'paid':
+            raise UserError(_('This invoice is already paid.'))
+            
         return {
             'name': _('Register Payment'),
             'type': 'ir.actions.act_window',

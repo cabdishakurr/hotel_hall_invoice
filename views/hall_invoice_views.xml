@@ -1,49 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Tree View -->
     <record id="view_hall_invoice_tree" model="ir.ui.view">
         <field name="name">hall.invoice.tree</field>
         <field name="model">hall.invoice</field>
         <field name="arch" type="xml">
-            <tree string="Hall Invoices">
+            <tree decoration-info="state == 'draft'" decoration-muted="state == 'cancelled'">
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="date"/>
                 <field name="amount_total"/>
                 <field name="state"/>
+                <field name="payment_state" widget="badge"/>
             </tree>
         </field>
     </record>
 
-    <!-- Form View -->
     <record id="view_hall_invoice_form" model="ir.ui.view">
         <field name="name">hall.invoice.form</field>
         <field name="model">hall.invoice</field>
         <field name="arch" type="xml">
-            <form string="Hall Invoice">
+            <form>
                 <header>
                     <button name="action_post" string="Post" type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'draft'"/>
-                    <button name="action_cancel" string="Cancel" type="object"
-                            invisible="state not in ('draft', 'posted')"/>
-                    <button name="action_draft" string="Reset to Draft" type="object"
-                            invisible="state != 'cancelled'"/>
-                    <button name="action_register_payment" 
-                            type="object" 
-                            string="Register Payment"
-                            class="oe_highlight"
-                            invisible="state != 'posted' or payment_state == 'paid'"/>
-                    <button name="%(action_report_hall_invoice)d"
-                            string="Print Invoice"
-                            type="action"
-                            class="oe_highlight"/>
-                    <field name="payment_state" widget="badge"
-                           decoration-success="payment_state == 'paid'"
-                           decoration-warning="payment_state == 'partial'"
-                           decoration-danger="payment_state == 'not_paid'"/>
-                    <field name="state" widget="statusbar" 
-                           statusbar_visible="draft,posted,cancelled"/>
+                            class="oe_highlight" attrs="{'invisible': [('state', '!=', 'draft')]}"/>
+                    <button name="action_cancel" string="Cancel" type="object" 
+                            attrs="{'invisible': [('state', '!=', 'draft')]}"/>
+                    <button name="action_draft" string="Reset to Draft" type="object" 
+                            attrs="{'invisible': [('state', '!=', 'cancelled')]}"/>
+                    <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -55,38 +39,33 @@
                         <group>
                             <field name="partner_id"/>
                             <field name="date"/>
-                            <field name="start_date"/>
-                            <field name="end_date"/>
                         </group>
                         <group>
                             <field name="currency_id" invisible="1"/>
-                            <field name="amount_paid"/>
-                            <field name="amount_residual"/>
+                            <field name="payment_state" widget="badge"/>
                         </group>
                     </group>
                     <notebook>
                         <page string="Invoice Lines">
-                            <field name="line_ids" 
-                                   invisible="state == 'cancelled'"
-                                   readonly="state == 'posted'">
+                            <field name="line_ids" widget="section_and_note_one2many">
                                 <tree editable="bottom">
                                     <field name="product_id"/>
                                     <field name="name"/>
                                     <field name="quantity"/>
-                                    <field name="number_of_days" readonly="1"/>
+                                    <field name="number_of_days"/>
                                     <field name="price_unit"/>
-                                    <field name="price_with_days"/>
                                     <field name="tax_ids" widget="many2many_tags"/>
                                     <field name="price_subtotal"/>
                                 </tree>
                             </field>
+                            <group class="oe_subtotal_footer">
+                                <field name="amount_untaxed"/>
+                                <field name="amount_tax"/>
+                                <field name="amount_total" class="oe_subtotal_footer_separator"/>
+                                <field name="amount_residual"/>
+                            </group>
                         </page>
                     </notebook>
-                    <group class="oe_subtotal_footer">
-                        <field name="amount_untaxed"/>
-                        <field name="amount_tax"/>
-                        <field name="amount_total" class="oe_subtotal_footer_separator"/>
-                    </group>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
@@ -97,22 +76,19 @@
         </field>
     </record>
 
-    <!-- Action -->
     <record id="action_hall_invoice" model="ir.actions.act_window">
         <field name="name">Hall Invoices</field>
-        <field name="type">ir.actions.act_window</field>
         <field name="res_model">hall.invoice</field>
         <field name="view_mode">tree,form</field>
     </record>
 
-    <!-- Menu -->
-    <menuitem id="menu_hall_invoice_root"
-        name="Hall Invoices"
-        sequence="5"/>
-
-    <menuitem id="menu_hall_invoice"
-        name="Hall Invoices"
-        parent="menu_hall_invoice_root"
-        action="action_hall_invoice"
-        sequence="1"/>
+    <menuitem id="menu_hall_invoice_root" 
+              name="Hall Invoices" 
+              sequence="5"/>
+              
+    <menuitem id="menu_hall_invoice" 
+              name="Hall Invoices"
+              parent="menu_hall_invoice_root"
+              action="action_hall_invoice"
+              sequence="1"/>
 </odoo> 
