@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from datetime import timedelta
 
 class HallInvoiceLine(models.Model):
     _name = 'hall.invoice.line'
@@ -7,10 +8,8 @@ class HallInvoiceLine(models.Model):
     invoice_id = fields.Many2one('hall.invoice', string='Invoice')
     product_id = fields.Many2one('product.product', string='Product', required=True)
     name = fields.Text(string='Description', required=True)
-    start_date = fields.Date(string='Start Date', required=True, default=fields.Date.today)
-    end_date = fields.Date(string='End Date', compute='_compute_end_date', store=True)
     quantity = fields.Float(string='Quantity', default=1.0)
-    number_of_days = fields.Integer(string='Number of Days', default=1)
+    number_of_days = fields.Integer(string='Number of Days', compute='_compute_days', store=True)
     price_unit = fields.Float(string='Unit Price')
     price_with_days = fields.Float(string='Price with Days', compute='_compute_price_with_days', store=True)
     tax_ids = fields.Many2many('account.tax', string='Taxes')
@@ -19,11 +18,11 @@ class HallInvoiceLine(models.Model):
     price_total = fields.Monetary(string='Total', compute='_compute_amounts', store=True)
     currency_id = fields.Many2one(related='invoice_id.currency_id')
 
-    @api.depends('start_date', 'number_of_days')
-    def _compute_end_date(self):
+    @api.depends('invoice_id.start_date', 'invoice_id.end_date')
+    def _compute_days(self):
         for line in self:
-            if line.start_date and line.number_of_days:
-                line.end_date = line.start_date + fields.Date.delta(days=line.number_of_days - 1)
+            if line.invoice_id.start_date and line.invoice_id.end_date:
+                line.number_of_days = (line.invoice_id.end_date - line.invoice_id.start_date).days + 1
 
     @api.onchange('product_id')
     def _onchange_product_id(self):

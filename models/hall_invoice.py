@@ -1,14 +1,17 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from datetime import timedelta
 
 class HallInvoice(models.Model):
     _name = 'hall.invoice'
-    _description = 'Hall Invoice'
     _inherit = ['mail.thread', 'mail.activity.mixin']
+    _description = 'Hall Invoice'
 
     name = fields.Char(string='Reference', required=True, copy=False, readonly=True, default='New')
     partner_id = fields.Many2one('res.partner', string='Customer', required=True)
     date = fields.Date(string='Date', default=fields.Date.today)
+    start_date = fields.Date(string='Start Date', required=True, default=fields.Date.today)
+    end_date = fields.Date(string='End Date', required=True)
     state = fields.Selection([
         ('draft', 'Draft'),
         ('posted', 'Posted'),
@@ -20,52 +23,25 @@ class HallInvoice(models.Model):
     amount_tax = fields.Monetary(string='Tax Amount', compute='_compute_amounts', store=True)
     amount_total = fields.Monetary(string='Total', compute='_compute_amounts', store=True)
     currency_id = fields.Many2one('res.currency', string='Currency', default=lambda self: self.env.company.currency_id)
-
+    
     payment_state = fields.Selection([
         ('not_paid', 'Not Paid'),
         ('partial', 'Partially Paid'),
-        ('paid', 'Paid'),
-        ('reversed', 'Reversed'),
+        ('paid', 'Paid')
     ], string='Payment Status', default='not_paid', tracking=True)
-
-    payment_ids = fields.Many2many('account.payment', string='Payments')
+    
     amount_paid = fields.Monetary(string='Amount Paid', compute='_compute_amount_paid', store=True)
     amount_residual = fields.Monetary(string='Amount Due', compute='_compute_amount_paid', store=True)
+    payment_ids = fields.Many2many('account.payment', string='Payments')
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get('name', 'New') == 'New':
-                vals['name'] = self.env['ir.sequence'].next_by_code('hall.invoice') or 'New'
-        return super().create(vals_list)
-
-    def action_post(self):
-        """Post the invoice"""
-        self.ensure_one()
-        if self.state == 'draft':
-            self.state = 'posted'
-        return True
-
-    def action_cancel(self):
-        """Cancel the invoice"""
-        self.ensure_one()
-        if self.state in ['draft', 'posted']:
-            self.state = 'cancelled'
-        return True
-
-    def action_draft(self):
-        """Reset to draft"""
-        self.ensure_one()
-        if self.state == 'cancelled':
-            self.state = 'draft'
-        return True
-
-    @api.depends('line_ids.price_subtotal', 'line_ids.price_tax')
-    def _compute_amounts(self):
-        for invoice in self:
-            invoice.amount_untaxed = sum(invoice.line_ids.mapped('price_subtotal'))
-            invoice.amount_tax = sum(invoice.line_ids.mapped('price_tax'))
-            invoice.amount_total = invoice.amount_untaxed + invoice.amount_tax 
+    @api.onchange('start_date', 'end_date')
+    def _onchange_dates(self):
+        if self.start_date and self.end_date:
+            if self.end_date < self.start_date:
+                raise UserError(_('End date cannot be earlier than start date.'))
+            delta = (self.end_date - self.start_date).days + 1
+            for line in self.line_ids:
+                line.number_of_days = delta
 
     @api.depends('payment_ids.amount', 'amount_total')
     def _compute_amount_paid(self):
@@ -80,6 +56,13 @@ class HallInvoice(models.Model):
                 invoice.payment_state = 'partial'
             else:
                 invoice.payment_state = 'not_paid'
+
+    @api.depends('line_ids.price_subtotal', 'line_ids.price_tax')
+    def _compute_amounts(self):
+        for invoice in self:
+            invoice.amount_untaxed = sum(invoice.line_ids.mapped('price_subtotal'))
+            invoice.amount_tax = sum(invoice.line_ids.mapped('price_tax'))
+            invoice.amount_total = invoice.amount_untaxed + invoice.amount_tax
 
     def action_register_payment(self):
         return {
