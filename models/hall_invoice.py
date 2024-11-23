@@ -29,8 +29,8 @@ class HallInvoice(models.Model):
     ], string='Payment Status', default='not_paid', tracking=True)
 
     payment_ids = fields.Many2many('account.payment', string='Payments')
-    amount_paid = fields.Monetary(string='Amount Paid', compute='_compute_amount_paid')
-    amount_residual = fields.Monetary(string='Amount Due', compute='_compute_amount_paid')
+    amount_paid = fields.Monetary(string='Amount Paid', compute='_compute_amount_paid', store=True)
+    amount_residual = fields.Monetary(string='Amount Due', compute='_compute_amount_paid', store=True)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -67,31 +67,33 @@ class HallInvoice(models.Model):
             invoice.amount_tax = sum(invoice.line_ids.mapped('price_tax'))
             invoice.amount_total = invoice.amount_untaxed + invoice.amount_tax 
 
-    @api.depends('payment_ids', 'amount_total')
+    @api.depends('payment_ids.amount', 'amount_total')
     def _compute_amount_paid(self):
         for invoice in self:
-            amount_paid = sum(invoice.payment_ids.mapped('amount'))
-            invoice.amount_paid = amount_paid
-            invoice.amount_residual = invoice.amount_total - amount_paid
-            if amount_paid >= invoice.amount_total:
+            paid_amount = sum(invoice.payment_ids.mapped('amount'))
+            invoice.amount_paid = paid_amount
+            invoice.amount_residual = invoice.amount_total - paid_amount
+            
+            if paid_amount >= invoice.amount_total:
                 invoice.payment_state = 'paid'
-            elif amount_paid > 0:
+            elif paid_amount > 0:
                 invoice.payment_state = 'partial'
             else:
                 invoice.payment_state = 'not_paid'
 
     def action_register_payment(self):
-        ''' Open the account.payment.register wizard to pay the selected journal entries.
-        :return: An action opening the account.payment.register wizard.
-        '''
         return {
             'name': _('Register Payment'),
-            'res_model': 'hall.payment.register',
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.payment.register',
             'view_mode': 'form',
             'context': {
-                'active_model': 'hall.invoice',
+                'active_model': self._name,
                 'active_ids': self.ids,
+                'default_payment_type': 'inbound',
+                'default_partner_type': 'customer',
+                'default_partner_id': self.partner_id.id,
+                'default_amount': self.amount_residual,
             },
             'target': 'new',
-            'type': 'ir.actions.act_window',
         }

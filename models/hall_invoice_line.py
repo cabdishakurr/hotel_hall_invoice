@@ -7,6 +7,8 @@ class HallInvoiceLine(models.Model):
     invoice_id = fields.Many2one('hall.invoice', string='Invoice')
     product_id = fields.Many2one('product.product', string='Product', required=True)
     name = fields.Text(string='Description', required=True)
+    start_date = fields.Date(string='Start Date', required=True, default=fields.Date.today)
+    end_date = fields.Date(string='End Date', compute='_compute_end_date', store=True)
     quantity = fields.Float(string='Quantity', default=1.0)
     number_of_days = fields.Integer(string='Number of Days', default=1)
     price_unit = fields.Float(string='Unit Price')
@@ -16,6 +18,18 @@ class HallInvoiceLine(models.Model):
     price_tax = fields.Monetary(string='Tax Amount', compute='_compute_amounts', store=True)
     price_total = fields.Monetary(string='Total', compute='_compute_amounts', store=True)
     currency_id = fields.Many2one(related='invoice_id.currency_id')
+
+    @api.depends('start_date', 'number_of_days')
+    def _compute_end_date(self):
+        for line in self:
+            if line.start_date and line.number_of_days:
+                line.end_date = line.start_date + fields.Date.delta(days=line.number_of_days - 1)
+
+    @api.onchange('product_id')
+    def _onchange_product_id(self):
+        if self.product_id:
+            self.name = self.product_id.get_product_multiline_description_sale()
+            self.price_unit = self.product_id.list_price
 
     @api.depends('price_unit', 'number_of_days')
     def _compute_price_with_days(self):

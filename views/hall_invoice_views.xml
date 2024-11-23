@@ -29,6 +29,19 @@
                             invisible="state not in ('draft', 'posted')"/>
                     <button name="action_draft" string="Reset to Draft" type="object"
                             invisible="state != 'cancelled'"/>
+                    <button name="action_register_payment" 
+                            type="object" 
+                            string="Register Payment"
+                            class="oe_highlight"
+                            invisible="state != 'posted' or payment_state == 'paid'"/>
+                    <button name="%(hotel_hall_invoice.action_report_hall_invoice)d"
+                            string="Print Invoice"
+                            type="action"
+                            class="oe_highlight"/>
+                    <field name="payment_state" widget="badge"
+                           decoration-success="payment_state == 'paid'"
+                           decoration-warning="payment_state == 'partial'"
+                           decoration-danger="payment_state == 'not_paid'"/>
                     <field name="state" widget="statusbar" 
                            statusbar_visible="draft,posted,cancelled"/>
                 </header>
@@ -55,6 +68,8 @@
                                 <tree editable="bottom">
                                     <field name="product_id"/>
                                     <field name="name"/>
+                                    <field name="start_date"/>
+                                    <field name="end_date" readonly="1"/>
                                     <field name="quantity"/>
                                     <field name="number_of_days"/>
                                     <field name="price_unit"/>
@@ -65,6 +80,12 @@
                             </field>
                         </page>
                     </notebook>
+                    <group>
+                        <group>
+                            <field name="amount_paid"/>
+                            <field name="amount_residual"/>
+                        </group>
+                    </group>
                     <group class="oe_subtotal_footer">
                         <field name="amount_untaxed"/>
                         <field name="amount_tax"/>

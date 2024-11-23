@@ -31,7 +31,8 @@
                             <thead>
                                 <tr>
                                     <th>Description</th>
-                                    <th>Quantity</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
                                     <th>Days</th>
                                     <th>Unit Price</th>
                                     <th>Price with Days</th>
@@ -41,7 +42,8 @@
                             <tbody>
                                 <tr t-foreach="o.line_ids" t-as="line">
                                     <td><span t-field="line.name"/></td>
-                                    <td><span t-field="line.quantity"/></td>
+                                    <td><span t-field="line.start_date"/></td>
+                                    <td><span t-field="line.end_date"/></td>
                                     <td><span t-field="line.number_of_days"/></td>
                                     <td><span t-field="line.price_unit"/></td>
                                     <td><span t-field="line.price_with_days"/></td>
