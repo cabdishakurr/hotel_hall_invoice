@@ -6,7 +6,7 @@
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">hotel_hall_invoice.report_hall_invoice</field>
         <field name="report_file">hotel_hall_invoice.report_hall_invoice</field>
-        <field name="print_report_name">'Hall Invoice - %s' % object.name</field>
+        <field name="print_report_name">'Hall Invoice - %s' % (object.name)</field>
         <field name="binding_model_id" ref="model_hall_invoice"/>
         <field name="binding_type">report</field>
     </record>
@@ -17,13 +17,18 @@
                 <t t-call="web.external_layout">
                     <div class="page">
                         <h2>Hall Invoice <span t-field="o.name"/></h2>
-                        
                         <div class="row mt32 mb32">
                             <div class="col-6">
                                 <strong>Customer:</strong>
                                 <p t-field="o.partner_id"/>
                                 <strong>Date:</strong>
                                 <p t-field="o.date"/>
+                                <strong>Period:</strong>
+                                <p>From <span t-field="o.start_date"/> to <span t-field="o.end_date"/></p>
+                            </div>
+                            <div class="col-6">
+                                <strong>Payment Status:</strong>
+                                <p t-field="o.payment_state"/>
                             </div>
                         </div>
 
@@ -31,9 +36,8 @@
                             <thead>
                                 <tr>
                                     <th>Description</th>
-                                    <th>Start Date</th>
-                                    <th>End Date</th>
-                                    <th>Days</th>
+                                    <th>Quantity</th>
+                                    <th>Number of Days</th>
                                     <th>Unit Price</th>
                                     <th>Price with Days</th>
                                     <th>Subtotal</th>
@@ -42,8 +46,7 @@
                             <tbody>
                                 <tr t-foreach="o.line_ids" t-as="line">
                                     <td><span t-field="line.name"/></td>
-                                    <td><span t-field="line.start_date"/></td>
-                                    <td><span t-field="line.end_date"/></td>
+                                    <td><span t-field="line.quantity"/></td>
                                     <td><span t-field="line.number_of_days"/></td>
                                     <td><span t-field="line.price_unit"/></td>
                                     <td><span t-field="line.price_with_days"/></td>

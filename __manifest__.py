@@ -12,9 +12,9 @@
     'depends': ['account', 'mail'],
     'data': [
         'security/ir.model.access.csv',
-        'data/sequence.xml',
         'views/hall_invoice_views.xml',
-        'reports/hotel_hall_invoice_report.xml',
+        'reports/hall_invoice_report.xml',
+        'data/sequence.xml',
     ],
     'installable': True,
     'application': True,
