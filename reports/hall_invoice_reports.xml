@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_hall_invoice" model="ir.actions.report">
+        <field name="name">Hall Invoice</field>
+        <field name="model">hall.invoice</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hotel_hall_invoice.report_hall_invoice</field>
+        <field name="report_file">hotel_hall_invoice.report_hall_invoice</field>
+        <field name="print_report_name">'Hall Invoice - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_hall_invoice"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo> 
