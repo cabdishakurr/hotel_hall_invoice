@@ -22,10 +22,15 @@
         <field name="arch" type="xml">
             <form string="Hall Invoice">
                 <header>
-                    <button name="action_post" string="Post" type="object" class="oe_highlight" states="draft"/>
-                    <button name="action_cancel" string="Cancel" type="object" states="draft,posted"/>
-                    <button name="action_draft" string="Reset to Draft" type="object" states="cancelled"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,posted,cancelled"/>
+                    <button name="action_post" string="Post" type="object" 
+                            class="oe_highlight" 
+                            invisible="state != 'draft'"/>
+                    <button name="action_cancel" string="Cancel" type="object"
+                            invisible="state not in ('draft', 'posted')"/>
+                    <button name="action_draft" string="Reset to Draft" type="object"
+                            invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar" 
+                           statusbar_visible="draft,posted,cancelled"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -44,7 +49,9 @@
                     </group>
                     <notebook>
                         <page string="Invoice Lines">
-                            <field name="line_ids">
+                            <field name="line_ids" 
+                                   invisible="state == 'cancelled'"
+                                   readonly="state == 'posted'">
                                 <tree editable="bottom">
                                     <field name="product_id"/>
                                     <field name="name"/>
