@@ -24,7 +24,8 @@
                 <header>
                     <button name="action_post" string="Post" type="object" class="oe_highlight" states="draft"/>
                     <button name="action_cancel" string="Cancel" type="object" states="draft,posted"/>
-                    <field name="state" widget="statusbar"/>
+                    <button name="action_draft" string="Reset to Draft" type="object" states="cancelled"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,posted,cancelled"/>
                 </header>
                 <sheet>
                     <div class="oe_title">

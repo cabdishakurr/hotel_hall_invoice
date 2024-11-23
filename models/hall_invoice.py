@@ -27,6 +27,27 @@ class HallInvoice(models.Model):
                 vals['name'] = self.env['ir.sequence'].next_by_code('hall.invoice') or 'New'
         return super().create(vals_list)
 
+    def action_post(self):
+        """Post the invoice"""
+        self.ensure_one()
+        if self.state == 'draft':
+            self.state = 'posted'
+        return True
+
+    def action_cancel(self):
+        """Cancel the invoice"""
+        self.ensure_one()
+        if self.state in ['draft', 'posted']:
+            self.state = 'cancelled'
+        return True
+
+    def action_draft(self):
+        """Reset to draft"""
+        self.ensure_one()
+        if self.state == 'cancelled':
+            self.state = 'draft'
+        return True
+
     @api.depends('line_ids.price_subtotal', 'line_ids.price_tax')
     def _compute_amounts(self):
         for invoice in self:
