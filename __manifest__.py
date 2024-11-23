@@ -9,10 +9,11 @@
         - Price with days computation
         - Custom invoice report
     """,
-    'depends': ['account'],
+    'depends': ['account', 'mail'],
     'data': [
         'security/ir.model.access.csv',
-        'views/account_move_views.xml',
+        'data/sequence.xml',
+        'views/hall_invoice_views.xml',
         'reports/hotel_hall_invoice_report.xml',
     ],
     'installable': True,
