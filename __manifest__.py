@@ -2,18 +2,20 @@
     'name': 'Hotel Hall Invoice',
     'version': '1.0',
     'category': 'Accounting/Accounting',
-    'summary': 'Extend invoicing for hotel halls',
+    'summary': 'Hotel Hall Invoice Management',
     'description': """
-This module extends the invoicing functionality for hotel halls.
-It adds a 'Number of Days' field and adjusts the subtotal calculation.
+        Manage hotel hall invoices with:
+        - Number of days calculation
+        - Price with days computation
+        - Custom invoice report
     """,
     'depends': ['account'],
     'data': [
+        'security/ir.model.access.csv',
         'views/account_move_views.xml',
         'reports/hotel_hall_invoice_report.xml',
     ],
     'installable': True,
-    'application': False,
-    'auto_install': False,
+    'application': True,
     'license': 'LGPL-3',
 }
