@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_hall_invoice" model="ir.actions.report">
+        <field name="name">Hall Invoice</field>
+        <field name="model">hall.invoice</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hotel_hall_invoice.report_hall_invoice</field>
+        <field name="report_file">hotel_hall_invoice.report_hall_invoice</field>
+        <field name="print_report_name">'Hall Invoice - %s' % object.name</field>
+        <field name="binding_model_id" ref="model_hall_invoice"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_hall_invoice">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Hall Invoice <span t-field="o.name"/></h2>
+                        
+                        <div class="row mt32 mb32">
+                            <div class="col-6">
+                                <strong>Customer:</strong>
+                                <p t-field="o.partner_id"/>
+                                <strong>Date:</strong>
+                                <p t-field="o.date"/>
+                            </div>
+                        </div>
+
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Quantity</th>
+                                    <th>Days</th>
+                                    <th>Unit Price</th>
+                                    <th>Price with Days</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.line_ids" t-as="line">
+                                    <td><span t-field="line.name"/></td>
+                                    <td><span t-field="line.quantity"/></td>
+                                    <td><span t-field="line.number_of_days"/></td>
+                                    <td><span t-field="line.price_unit"/></td>
+                                    <td><span t-field="line.price_with_days"/></td>
+                                    <td><span t-field="line.price_subtotal"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="row justify-content-end">
+                            <div class="col-4">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Subtotal</strong></td>
+                                        <td class="text-right">
+                                            <span t-field="o.amount_untaxed"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Taxes</strong></td>
+                                        <td class="text-right">
+                                            <span t-field="o.amount_tax"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-top">
+                                        <td><strong>Total</strong></td>
+                                        <td class="text-right">
+                                            <span t-field="o.amount_total"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo> 
